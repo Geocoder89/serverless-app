@@ -1,0 +1,97 @@
+#app metadata
+org: geocoderserverless 
+app: my-serverless-app
+service: mini-ecommerce-api-serverless
+
+frameworkVersion: "4"
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: ca-central-1 ## Change the ca-central to the region of choice
+  environment: ## This binds your env variable to the dynamoDB product table
+    PRODUCTS_TABLE:
+      Ref: ProductsTable  
+## Lambda permissions.
+  iamRoleStatements: 
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: arn:aws:dynamodb:ca-central-1:${aws:accountId}:table/ProductsTable ## Change the ca-central to the region of choice
+## handler build configuration
+package: 
+  individually: true ## This causes each lambda function to be built and packaged individually, this was done to save space
+  exclude:
+    - node_modules/**
+    - .serverless/**
+    - .git/**
+    - test/**
+    - README.md
+    - package-lock.json
+
+## Handler functions
+functions:
+  createProduct:
+    handler: src/handlers/createProduct.createProduct ## The handler to create products
+    events:
+      - http:
+          path: products
+          method: post
+
+  listProducts:
+    handler: src/handlers/listProducts.listProducts
+    events:
+      - http:
+          path: products
+          method: get
+
+  getProductById:
+    handler: src/handlers/getProductById.getProductById
+    events:
+      - http:
+          path: products/{id}
+          method: get
+
+  updateProduct:
+    handler: src/handlers/updateProduct.updateProduct
+    events:
+      - http:
+          path: products/{id}
+          method: put
+
+  deleteProduct:
+    handler: src/handlers/deleteProduct.deleteProduct
+    events:
+      - http:
+          path: products/{id}
+          method: delete
+
+#DynamoDB table configuration
+resources:
+  Resources:
+    ProductsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ProductsTable
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+plugins:
+  - serverless-offline
+
+
+
+
+ 

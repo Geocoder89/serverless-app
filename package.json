@@ -1,0 +1,19 @@
+{
+  "name": "mini-ecommerce-api-serverless",
+  "version": "1.0.0",
+  "description": "",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.585.0",
+    "@aws-sdk/lib-dynamodb": "^3.585.0",
+    "@types/node": "^22.10.5",
+    "aws-sdk": "^2.1692.0",
+    "express": "^4.19.2",
+    "serverless-http": "^3.2.0",
+    "ts-node": "^10.9.2"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.147",
+    "serverless-offline": "^14.4.0",
+    "typescript": "^5.7.2"
+  }
+}
