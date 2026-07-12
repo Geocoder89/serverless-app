@@ -1,55 +1,82 @@
-import { APIGatewayProxyHandler } from "aws-lambda";
-import { DynamoDB } from "aws-sdk";
-import dynamoDB from "../utils/DynamoDbClient";
-import { Product } from "../interfaces/Product";
+import { GetCommand } from '@aws-sdk/lib-dynamodb';
+import type { APIGatewayProxyHandler } from 'aws-lambda';
+import type { ProductItem } from '../interfaces/Product';
+import dynamoDB from '../utils/DynamoDbClient';
+import { getProductsTableName } from '../utils/config';
+import { jsonResponse } from '../utils/http';
+import { logError, logInfo, logWarn } from '../utils/logger';
 
-export const getProductById: APIGatewayProxyHandler = async(event)=>{
-  const productId = event.pathParameters?.id
+export const getProductById: APIGatewayProxyHandler = async (
+  event,
+  context,
+) => {
+  const requestId = context.awsRequestId;
+  const productId = event.pathParameters?.id;
 
-  if(!productId) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({
-        error: "Product ID is required"
-      })
-    }
+  if (!productId) {
+    logWarn('Product ID was not provided', {
+      requestId,
+      operation: 'getProductById',
+    });
+
+    return jsonResponse(400, {
+      success: false,
+      error: 'Product ID is required',
+    });
   }
-
-  const params: DynamoDB.DocumentClient.GetItemInput = {
-    TableName: process.env.PRODUCTS_TABLE!,
-    Key: {
-      PK: `PRODUCT#${productId}`,
-      SK: "PRODUCT"
-    }
-  }
-
   try {
+    const result = await dynamoDB.send(
+      new GetCommand({
+        TableName: getProductsTableName(),
+        Key: {
+          PK: `PRODUCT#${productId}`,
+          SK: 'PRODUCT',
+        },
+        ConsistentRead: false,
+      }),
+    );
+    const product = result.Item as ProductItem | undefined;
 
-    const result: DynamoDB.DocumentClient.GetItemOutput = await dynamoDB.get(params).promise()
-    const product: Product | undefined = result.Item as Product
+    if (!product) {
+      logWarn('Product not found', {
+        requestId,
+        operation: 'getProductById',
+        productId,
+      });
 
-    if(!product) {
-      return {
-        statusCode: 404,
-        body: JSON.stringify({
-          error: "Product not found!"
-        })
-      }
+      return jsonResponse(404, {
+        success: false,
+        error: 'Product not found',
+      });
     }
-    
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        success: true,
-        data: product
-      })
-    }
-    
+
+    const {
+      PK: _pk,
+      SK: _sk,
+      entityType: _entityType,
+      ...publicProduct
+    } = product;
+
+    logInfo('Product retrieved', {
+      requestId,
+      operation: 'getProductById',
+      productId,
+    });
+
+    return jsonResponse(200, {
+      success: true,
+      data: publicProduct,
+    });
   } catch (error) {
-    console.error('Error fetching product:', error)
-    return {
-      statusCode: 500,
-      body: JSON.stringify({error: `Could not fetch product with id ${productId}`})
-    }
+    logError('Product retrieval failed', error, {
+      requestId,
+      operation: 'getProductById',
+      productId,
+    });
+
+    return jsonResponse(500, {
+      success: false,
+      error: 'Could not fetch product',
+    });
   }
-}
+};

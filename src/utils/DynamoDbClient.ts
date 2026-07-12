@@ -1,5 +1,14 @@
-import { DynamoDB } from "aws-sdk";
+import {DynamoDBClient} from '@aws-sdk/client-dynamodb'
+import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb'
 
-const dynamoDB = new DynamoDB.DocumentClient()
+const client = new DynamoDBClient({
+  maxAttempts: 3,
+})
+
+const dynamoDB = DynamoDBDocumentClient.from(client,{
+  marshallOptions: {
+    removeUndefinedValues: true
+  }
+})
 
 export default dynamoDB

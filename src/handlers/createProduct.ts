@@ -1,49 +1,106 @@
+
+import { randomUUID } from 'node:crypto';
+import { ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
+import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
+import type { CreateProductInput, ProductItem } from '../interfaces/Product';
 import dynamoDB from '../utils/DynamoDbClient';
-import { Product } from '../interfaces/Product';
-import { DynamoDB } from 'aws-sdk';
+import { getProductsTableName } from '../utils/config';
+import { jsonResponse, parseJsonBody } from '../utils/http';
+import { logError, logInfo, logWarn } from '../utils/logger';
+import { validateCreateProduct } from '../utils/validation';
+
 
 // Handler definition
-export const createProduct: APIGatewayProxyHandler = async (event) => {
-  const body: Partial<Product> = JSON.parse(event.body || '{}');
-  const { name, price, description } = body;
-  if (!name || !price) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: 'Name and price are required!' }),
-    };
-  }
-
-  const params: DynamoDB.DocumentClient.PutItemInput = {
-    TableName: process.env.PRODUCTS_TABLE!,
-    Item: {
-      PK: `PRODUCT#${name}`,
-      SK: `PRODUCT`,
-      name,
-      price,
-      description,
-    } as Product,
-  };
-
-  console.log('Params for DynamoDB:', params);
-
+export const createProduct: APIGatewayProxyHandler = async (event, context) => {
+  const requestId = context.awsRequestId;
   try {
-    const newProduct = await dynamoDB.put(params).promise();
-    console.log('Product created successfully:', newProduct); // logging purpose
-    return {
-      statusCode: 201,
-      body: JSON.stringify({
-        message: 'Product created successfully',
-        data: params.Item,
-      }),
+    // parse event body
+    const input = parseJsonBody<CreateProductInput>(event.body);
+
+    // try for validation issues
+    const validationErrors = validateCreateProduct(input);
+
+    if (validationErrors.length > 0) {
+      logWarn('Product validation failed', {
+        requestId,
+        operation: 'createProduct',
+        validationErrors,
+      });
+      return jsonResponse(400, {
+        success: false,
+        errors: validationErrors,
+      });
+    }
+    // if none build what is returned
+    const now = new Date().toISOString();
+    const id = randomUUID();
+
+    const product: ProductItem = {
+      PK: `PRODUCT#${id}`,
+      SK: 'PRODUCT',
+      entityType: 'PRODUCT',
+      id,
+      name: input.name.trim(),
+      price: input.price,
+      createdAt: now,
+      updatedAt: now,
+      ...(input.description?.trim()
+        ? { description: input.description.trim() }
+        : {}),
     };
+
+    // send the document to dynamo db
+
+    await dynamoDB.send(
+      new PutCommand({
+        TableName: getProductsTableName(),
+        Item: product,
+        ConditionExpression: 'attribute_not_exists(PK)',
+      }),
+    );
+    // send a success log
+    logInfo('Product created', {
+      requestId,
+      operation: 'createProduct',
+      productId: id,
+    });
+    const {
+      PK: _pk,
+      SK: _sk,
+      entityType: _entityType,
+      ...publicProduct
+    } = product;
+
+    return jsonResponse(201, {
+      success: true,
+      data: publicProduct,
+    });
   } catch (error) {
-    console.error('Error creating product:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        error: 'Could not create product',
-      }),
-    };
+    if (error instanceof SyntaxError) {
+      logWarn('Invalid JSON request body', {
+        requestId,
+        operation: 'createProduct',
+      });
+      return jsonResponse(400, {
+        success: false,
+        error: error.message
+      })
+    }
+
+    if(error instanceof ConditionalCheckFailedException) {
+      return jsonResponse(409, {
+        success: false, 
+        error: "A product with this identifier already exists"
+      })
+    }
+    logError("Product creation failed", error, {
+      requestId,
+      operation: "createProduct"
+    })
+    return jsonResponse(500, {
+      success: false,
+      error: "Could not create product"
+    })
   }
 };
