@@ -1,2 +1,38 @@
-node_modules
-.serverless
+# Node.js
+node_modules/
+dist/
+
+# Serverless Framework
+.serverless/
+
+# Terraform working directory
+infra/.terraform/
+
+# Terraform state
+infra/*.tfstate
+infra/*.tfstate.*
+
+# Terraform plans and generated Lambda packages
+infra/build/
+infra/tfplan
+infra/*.tfplan
+
+# Terraform variable files — may contain secrets
+infra/terraform.tfvars
+infra/*.auto.tfvars
+
+# Terraform crash and override files
+infra/crash.log
+infra/crash.*.log
+infra/override.tf
+infra/override.tf.json
+infra/*_override.tf
+infra/*_override.tf.json
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
