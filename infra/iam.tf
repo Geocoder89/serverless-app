@@ -52,3 +52,45 @@ resource "aws_iam_role_policy" "dynamodb_access" {
   role   = aws_iam_role.lambda_execution.id
   policy = data.aws_iam_policy_document.dynamodb_access.json
 }
+
+# Permission to get Datadog variable from ssm
+
+data "aws_kms_alias" "ssm" {
+  name = "alias/aws/ssm"
+}
+
+
+
+data "aws_iam_policy_document" "datadog_api_key_access" {
+  statement {
+    sid    = "ReadDatadogApiKeyParameter"
+    effect = "Allow"
+
+    actions = [
+      "ssm:GetParameter"
+    ]
+
+    resources = [
+      local.datadog_api_key_ssm_arn
+    ]
+  }
+
+  statement {
+    sid    = "DecryptDatadogApiKeyParameter"
+    effect = "Allow"
+
+    actions = [
+      "kms:Decrypt"
+    ]
+
+    resources = [
+      data.aws_kms_alias.ssm.target_key_arn
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "datadog_api_key_access" {
+  name   = "${var.project_name}-datadog-api-key-${var.environment}"
+  role   = aws_iam_role.lambda_execution.id
+  policy = data.aws_iam_policy_document.datadog_api_key_access.json
+}
