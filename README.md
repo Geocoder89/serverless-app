@@ -934,3 +934,8 @@ TypeScript development
 ```
 
 It provides a practical example of migrating a working serverless application to Terraform while adding production-style observability, proactive alerting, and secure secret management.
+
+
+> **Deployment status:** The AWS resources used for this demonstration have
+> been destroyed to prevent ongoing cloud costs. The Terraform configuration
+> remains available and can be used to reproduce the infrastructure.
