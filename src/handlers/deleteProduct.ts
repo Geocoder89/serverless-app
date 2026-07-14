@@ -1,57 +1,65 @@
-import { APIGatewayProxyHandler } from "aws-lambda";
-import { DynamoDB } from "aws-sdk";
-import dynamoDB from "../utils/DynamoDbClient";
+import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
+import { DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import type { APIGatewayProxyHandler } from "aws-lambda";
 
-export const deleteProduct: APIGatewayProxyHandler = async (event)=> {
-  const productId = event.pathParameters?.id
+import dynamoDB from "../utils/DynamoDbClient";
+import { getProductsTableName } from "../utils/config";
+import { jsonResponse } from "../utils/http";
+import { logError,logInfo,logWarn } from "../utils/logger";
+export const deleteProduct: APIGatewayProxyHandler = async (event,context)=> {
+  const requestId = context.awsRequestId;
+  const productId = event.pathParameters?.id?.trim()
 
   if(!productId) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({
-        success: false,
-        error: 'Product ID is required'
-      })
-    }
-  }
+    logWarn("ProductID was not provided", {
+      requestId,
+      operation: 'deleteProduct'
+    })
 
-  const params: DynamoDB.DocumentClient.DeleteItemInput = {
-    TableName: process.env.PRODUCTS_TABLE!,
-    Key: {
-      PK: `PRODUCT#${productId}`,
-      SK: "PRODUCT",
-    },
-    ConditionExpression: "attribute_exists(PK)"
+    return jsonResponse(400, {
+      success: false,
+      error: "Product ID is required",
+    })
   }
 
   try {
-    await dynamoDB.delete(params).promise()
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        success: true,
-        message: "Product deleted successfully"
+    await dynamoDB.send(
+      new DeleteCommand({
+        TableName: getProductsTableName(),
+        Key: {
+          PK: `PRODUCT#${productId}`,
+          SK: "PRODUCT"
+        },
+         ConditionExpression: "attribute_exists(PK)",
       })
-    }
-  } catch (error: any) {
-    console.error('Error deleting product:', error)
+    )
+    logInfo("Product deleted", {
+      requestId,
+      operation: "deleteProduct",
+      productId
+    });
 
-    if (error.code === "ConditionalCheckFailedException") {
-      return {
-        statusCode: 404,
-        body: JSON.stringify({
-          success: false,
-          error: "Product not found.",
-        }),
-      };
-    }
-
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
+    return jsonResponse(200, {
+      success: true,
+      message: "Product deleted successfully"
+    })
+  } catch(error) {
+    if (error instanceof ConditionalCheckFailedException) {
+      return jsonResponse(404, {
         success: false,
-        error: "Could not delete product.",
-      }),
-    };
+        error: "Product not found",
+      });
+    }
+
+    logError("Product deletion failed", error, {
+      requestId,
+      operation: "deleteProduct",
+      productId,
+    });
+
+    return jsonResponse(500, {
+      success: false,
+      error: "Could not delete product",
+    });
   }
 }
