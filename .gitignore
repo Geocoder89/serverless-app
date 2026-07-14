@@ -1,6 +1,10 @@
 # Node.js
 node_modules/
-dist/
+# Generated application bundles
+/dist/
+
+# Terraform-generated packages
+/infra/build/
 
 # Serverless Framework
 .serverless/
