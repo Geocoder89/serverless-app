@@ -1,5 +1,5 @@
 import { ScanCommand } from '@aws-sdk/lib-dynamodb';
-import type { APIGatewayProxyHandler } from 'aws-lambda';
+import type {APIGatewayProxyHandlerV2 } from 'aws-lambda';
 
 import type { Product, ProductItem } from '../interfaces/Product';
 import dynamoDB from '../utils/DynamoDbClient';
@@ -11,7 +11,7 @@ const toPublicProduct = (item: ProductItem): Product => {
   const { PK: _pk, SK: _sk, entityType: _entityType, ...product } = item;
   return product;
 };
-export const listProducts: APIGatewayProxyHandler = async (event, context) => {
+export const listProducts: APIGatewayProxyHandlerV2 = async (event, context) => {
   const requestId = context.awsRequestId;
 
   try {

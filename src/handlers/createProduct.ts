@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
 import { PutCommand } from '@aws-sdk/lib-dynamodb';
-import { APIGatewayProxyHandler } from 'aws-lambda';
+import { APIGatewayProxyHandlerV2 } from 'aws-lambda';
 import type { CreateProductInput, ProductItem } from '../interfaces/Product';
 import dynamoDB from '../utils/DynamoDbClient';
 import { getProductsTableName } from '../utils/config';
@@ -12,7 +12,7 @@ import { validateCreateProduct } from '../utils/validation';
 
 
 // Handler definition
-export const createProduct: APIGatewayProxyHandler = async (event, context) => {
+export const createProduct: APIGatewayProxyHandlerV2 = async (event, context) => {
   const requestId = context.awsRequestId;
   try {
     // parse event body

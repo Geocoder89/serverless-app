@@ -1,6 +1,6 @@
 import { ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
 import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
-import type { APIGatewayProxyHandler } from 'aws-lambda';
+import type { APIGatewayProxyHandlerV2 } from 'aws-lambda';
 
 import type { ProductItem, UpdateProductInput } from '../interfaces/Product';
 import dynamoDB from '../utils/DynamoDbClient';
@@ -8,7 +8,7 @@ import { getProductsTableName } from '../utils/config';
 import { jsonResponse, parseJsonBody } from '../utils/http';
 import { logError, logInfo, logWarn } from '../utils/logger';
 import { validateUpdateProduct } from '../utils/validation';
-export const updateProduct: APIGatewayProxyHandler = async (event, context) => {
+export const updateProduct: APIGatewayProxyHandlerV2 = async (event, context) => {
   const requestId = context.awsRequestId;
   const productId = event.pathParameters?.id?.trim();
 

@@ -14,10 +14,11 @@ export const jsonResponse = (
   body: JSON.stringify(payload)
 })
 
-export const parseJsonBody=  <T> (body: string | null ): T => {
+export const parseJsonBody=  <T> (body: string | null | undefined ): T => {
   if(!body) {
     throw new SyntaxError('Request body is required')
   }
 
   return JSON.parse(body) as T;
 }
+

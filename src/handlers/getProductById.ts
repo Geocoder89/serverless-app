@@ -1,12 +1,12 @@
 import { GetCommand } from '@aws-sdk/lib-dynamodb';
-import type { APIGatewayProxyHandler } from 'aws-lambda';
+import type { APIGatewayProxyHandlerV2 } from 'aws-lambda';
 import type { ProductItem } from '../interfaces/Product';
 import dynamoDB from '../utils/DynamoDbClient';
 import { getProductsTableName } from '../utils/config';
 import { jsonResponse } from '../utils/http';
 import { logError, logInfo, logWarn } from '../utils/logger';
 
-export const getProductById: APIGatewayProxyHandler = async (
+export const getProductById: APIGatewayProxyHandlerV2 = async (
   event,
   context,
 ) => {
